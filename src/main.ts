@@ -1,6 +1,6 @@
 import "leaflet/dist/leaflet.css";
 import "./style.css";
-import leaflet from "leaflet";
+import leaflet, { LatLng } from "leaflet";
 import luck from "./luck";
 import "./leafletWorkaround";
 
@@ -44,6 +44,7 @@ sensorButton.addEventListener("click", () => {
       leaflet.latLng(position.coords.latitude, position.coords.longitude)
     );
     map.setView(playerMarker.getLatLng());
+    generatePits(playerMarker.getLatLng());
   });
 });
 
@@ -64,6 +65,8 @@ function makePit(i: number, j: number) {
   ]);
 
   const pit = leaflet.rectangle(bounds) as leaflet.Layer;
+
+  console.log(`${i}, ${j}`);
 
   pit.bindPopup(() => {
     let value = Math.floor(luck([i, j, "initialValue"].toString()) * 100);
@@ -88,6 +91,29 @@ for (let i = -NEIGHBORHOOD_SIZE; i < NEIGHBORHOOD_SIZE; i++) {
   for (let j = -NEIGHBORHOOD_SIZE; j < NEIGHBORHOOD_SIZE; j++) {
     if (luck([i, j].toString()) < PIT_SPAWN_PROBABILITY) {
       makePit(i, j);
+    }
+  }
+}
+
+function generatePits(playerPos: LatLng) {
+  const centerX = (playerPos.lat - MERRILL_CLASSROOM.lat) / TILE_DEGREES;
+  const centerY = (playerPos.lng - MERRILL_CLASSROOM.lng) / TILE_DEGREES;
+  console.log(centerX);
+  console.log(centerY);
+
+  for (
+    let i = centerX - NEIGHBORHOOD_SIZE;
+    i < centerX + NEIGHBORHOOD_SIZE;
+    i++
+  ) {
+    for (
+      let j = centerY - NEIGHBORHOOD_SIZE;
+      j < centerY + NEIGHBORHOOD_SIZE;
+      j++
+    ) {
+      if (luck([i, j].toString()) < PIT_SPAWN_PROBABILITY) {
+        makePit(Math.floor(i), Math.floor(j));
+      }
     }
   }
 }
