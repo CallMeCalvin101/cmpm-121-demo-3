@@ -3,6 +3,7 @@ import "./style.css";
 import leaflet, { LatLng } from "leaflet";
 import luck from "./luck";
 import "./leafletWorkaround";
+import { Board } from "./board";
 
 const MERRILL_CLASSROOM = leaflet.latLng({
   lat: 36.9995,
@@ -33,8 +34,71 @@ leaflet
   })
   .addTo(map);
 
+class Pit {
+  posI: number;
+  posJ: number;
+  value: number;
+  boundedArea: leaflet.Layer;
+
+  constructor(
+    i: number,
+    j: number,
+    startingVal: number,
+    bounds: leaflet.LatLngBounds
+  ) {
+    this.posI = i;
+    this.posJ = j;
+    this.value = startingVal;
+
+    this.boundedArea = leaflet.rectangle(bounds) as leaflet.Layer;
+    this.addPopUp();
+    this.boundedArea.addTo(map);
+  }
+
+  private addPopUp() {
+    this.boundedArea.bindPopup(() => {
+      const container = document.createElement("div");
+      container.innerHTML = `
+                <div>There is a pit here at "${this.posI},${this.posJ}". It has value <span id="value">${this.value}</span>.</div>
+                <button id="poke">poke</button>
+                <button id="add">add</button>`;
+
+      const poke = container.querySelector<HTMLButtonElement>("#poke")!;
+      poke.addEventListener("click", () => {
+        if (this.value > 0) {
+          this.value--;
+          container.querySelector<HTMLSpanElement>("#value")!.innerHTML =
+            this.value.toString();
+          points++;
+          statusPanel.innerHTML = `${points} points accumulated`;
+        }
+      });
+
+      const add = container.querySelector<HTMLButtonElement>("#add")!;
+      add.addEventListener("click", () => {
+        if (points > 0) {
+          this.value++;
+          container.querySelector<HTMLSpanElement>("#value")!.innerHTML =
+            this.value.toString();
+          points--;
+          statusPanel.innerHTML = `${points} points accumulated`;
+        }
+      });
+      return container;
+    });
+  }
+}
+
+const allPits: Pit[] = [];
+
+const board = new Board(MERRILL_CLASSROOM, TILE_DEGREES, NEIGHBORHOOD_SIZE);
+
+const playerLocation = { i: 0, j: 0 };
+
 const playerMarker = leaflet.marker(MERRILL_CLASSROOM);
-playerMarker.bindTooltip("That's you!");
+playerMarker.bindTooltip(
+  `You are located at cell: ${playerLocation.i} , ${playerLocation.j}`
+);
 playerMarker.addTo(map);
 
 const sensorButton = document.querySelector("#sensor")!;
@@ -53,67 +117,33 @@ const statusPanel = document.querySelector<HTMLDivElement>("#statusPanel")!;
 statusPanel.innerHTML = "No points yet...";
 
 function makePit(i: number, j: number) {
-  const bounds = leaflet.latLngBounds([
-    [
-      MERRILL_CLASSROOM.lat + i * TILE_DEGREES,
-      MERRILL_CLASSROOM.lng + j * TILE_DEGREES,
-    ],
-    [
-      MERRILL_CLASSROOM.lat + (i + 1) * TILE_DEGREES,
-      MERRILL_CLASSROOM.lng + (j + 1) * TILE_DEGREES,
-    ],
-  ]);
+  const bounds = board.getCellBounds({ i: i, j: j });
 
-  const pit = leaflet.rectangle(bounds) as leaflet.Layer;
-
-  console.log(`${i}, ${j}`);
-
-  pit.bindPopup(() => {
-    let value = Math.floor(luck([i, j, "initialValue"].toString()) * 100);
-    const container = document.createElement("div");
-    container.innerHTML = `
-                <div>There is a pit here at "${i},${j}". It has value <span id="value">${value}</span>.</div>
-                <button id="poke">poke</button>`;
-    const poke = container.querySelector<HTMLButtonElement>("#poke")!;
-    poke.addEventListener("click", () => {
-      value--;
-      container.querySelector<HTMLSpanElement>("#value")!.innerHTML =
-        value.toString();
-      points++;
-      statusPanel.innerHTML = `${points} points accumulated`;
-    });
-    return container;
-  });
-  pit.addTo(map);
-}
-
-for (let i = -NEIGHBORHOOD_SIZE; i < NEIGHBORHOOD_SIZE; i++) {
-  for (let j = -NEIGHBORHOOD_SIZE; j < NEIGHBORHOOD_SIZE; j++) {
-    if (luck([i, j].toString()) < PIT_SPAWN_PROBABILITY) {
-      makePit(i, j);
-    }
-  }
+  const pit = new Pit(
+    i,
+    j,
+    Math.floor(luck([i, j, "initialValue"].toString()) * 100),
+    bounds
+  );
+  allPits.push(pit);
 }
 
 function generatePits(playerPos: LatLng) {
-  const centerX = (playerPos.lat - MERRILL_CLASSROOM.lat) / TILE_DEGREES;
-  const centerY = (playerPos.lng - MERRILL_CLASSROOM.lng) / TILE_DEGREES;
-  console.log(centerX);
-  console.log(centerY);
+  const neighboringCells = board.getCellsNearPoint(playerPos);
+  const currentCell = board.getCellForPoint(playerPos);
 
-  for (
-    let i = centerX - NEIGHBORHOOD_SIZE;
-    i < centerX + NEIGHBORHOOD_SIZE;
-    i++
-  ) {
-    for (
-      let j = centerY - NEIGHBORHOOD_SIZE;
-      j < centerY + NEIGHBORHOOD_SIZE;
-      j++
-    ) {
-      if (luck([i, j].toString()) < PIT_SPAWN_PROBABILITY) {
-        makePit(Math.floor(i), Math.floor(j));
-      }
+  playerLocation.i = currentCell.i;
+  playerLocation.j = currentCell.j;
+  playerMarker.setTooltipContent(
+    `You are located at cell: ${playerLocation.i} , ${playerLocation.j}`
+  );
+  console.log(playerLocation);
+
+  neighboringCells.forEach((cell) => {
+    if (luck([cell.i, cell.j].toString()) < PIT_SPAWN_PROBABILITY) {
+      makePit(cell.i, cell.j);
     }
-  }
+  });
 }
+
+generatePits(playerMarker.getLatLng());

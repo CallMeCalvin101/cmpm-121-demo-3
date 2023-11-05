@@ -1,4 +1,5 @@
 import leaflet from "leaflet";
+const ORIGIN = { i: 0, j: 0 };
 
 interface Cell {
   readonly i: number;
@@ -21,12 +22,12 @@ export class Board {
     this.tileWidth = tileWidth;
     this.tileVisibilityRadius = tileVisibilityRadius;
     this.knownCells = new Map();
+    this.knownCells.set([ORIGIN.i, ORIGIN.j].toString(), ORIGIN);
   }
 
   private getCanonicalCell(cell: Cell): Cell {
     const { i, j } = cell;
     const key = [i, j].toString();
-    // ...
     return this.knownCells.get(key)!;
   }
 
@@ -36,12 +37,15 @@ export class Board {
   }
 
   getCellForPoint(point: leaflet.LatLng): Cell {
-    const cellI = (point.lat - this.mapOrigin.lat) / this.tileWidth;
-    const cellJ = (point.lng - this.mapOrigin.lng) / this.tileWidth;
-    return this.getCanonicalCell({
-      i: cellI,
-      j: cellJ,
-    });
+    const getCell = {
+      i: Math.floor((point.lat - this.mapOrigin.lat) / this.tileWidth),
+      j: Math.floor((point.lng - this.mapOrigin.lng) / this.tileWidth),
+    };
+
+    if (!this.knownCells.has(getCell.toString())) {
+      this.addKnownCell(getCell);
+    }
+    return this.getCanonicalCell(getCell);
   }
 
   getCellBounds(cell: Cell): leaflet.LatLngBounds {
