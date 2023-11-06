@@ -10,10 +10,16 @@ const MERRILL_CLASSROOM = leaflet.latLng({
   lng: -122.0533,
 });
 
+const NULL_ISLAND = leaflet.latLng({
+  lat: 0,
+  lng: 0,
+});
+
 const GAMEPLAY_ZOOM_LEVEL = 19;
 const TILE_DEGREES = 1e-4;
 const NEIGHBORHOOD_SIZE = 8;
 const PIT_SPAWN_PROBABILITY = 0.1;
+const FIRST_ELEMENT = 0;
 
 const mapContainer = document.querySelector<HTMLElement>("#map")!;
 
@@ -39,6 +45,7 @@ class Pit {
   posJ: number;
   value: number;
   boundedArea: leaflet.Layer;
+  coinStash: Coin[];
 
   constructor(
     i: number,
@@ -49,6 +56,7 @@ class Pit {
     this.posI = i;
     this.posJ = j;
     this.value = startingVal;
+    this.coinStash = [];
 
     this.boundedArea = leaflet.rectangle(bounds) as leaflet.Layer;
     this.addPopUp();
@@ -59,18 +67,22 @@ class Pit {
     this.boundedArea.bindPopup(() => {
       const container = document.createElement("div");
       container.innerHTML = `
-                <div>There is a pit here at "${this.posI},${this.posJ}". It has value <span id="value">${this.value}</span>.</div>
+                <div>There is a pit here at "${this.posI},${
+        this.posJ
+      }". It has value <span id="value">${this.value}</span>.</div>
+                <div id="stash">${printCoinsFromList(this.coinStash)}</div>
                 <button id="poke">poke</button>
                 <button id="add">add</button>`;
 
       const poke = container.querySelector<HTMLButtonElement>("#poke")!;
       poke.addEventListener("click", () => {
         if (this.value > 0) {
+          ownedCoins.push(new Coin(this.posI, this.posJ, this.value));
           this.value--;
           container.querySelector<HTMLSpanElement>("#value")!.innerHTML =
             this.value.toString();
           points++;
-          statusPanel.innerHTML = `${points} points accumulated`;
+          statusPanel.innerHTML = printCoinsFromList(ownedCoins);
         }
       });
 
@@ -80,18 +92,37 @@ class Pit {
           this.value++;
           container.querySelector<HTMLSpanElement>("#value")!.innerHTML =
             this.value.toString();
+
+          this.stashNewCoin();
+          container.querySelector<HTMLSpanElement>("#stash")!.innerHTML =
+            printCoinsFromList(this.coinStash);
           points--;
-          statusPanel.innerHTML = `${points} points accumulated`;
+          statusPanel.innerHTML = printCoinsFromList(ownedCoins);
         }
       });
       return container;
     });
   }
+
+  private stashNewCoin() {
+    const coin = ownedCoins[FIRST_ELEMENT];
+    ownedCoins = ownedCoins.slice(FIRST_ELEMENT + 1);
+    this.coinStash.push(coin);
+  }
+}
+
+class Coin {
+  id: string;
+
+  constructor(i: number, j: number, serial: number) {
+    this.id = `${i}:${j}#${serial}`;
+  }
 }
 
 const allPits: Pit[] = [];
+let ownedCoins: Coin[] = [];
 
-const board = new Board(MERRILL_CLASSROOM, TILE_DEGREES, NEIGHBORHOOD_SIZE);
+const board = new Board(NULL_ISLAND, TILE_DEGREES, NEIGHBORHOOD_SIZE);
 
 const playerLocation = { i: 0, j: 0 };
 
@@ -144,6 +175,19 @@ function generatePits(playerPos: LatLng) {
       makePit(cell.i, cell.j);
     }
   });
+}
+
+function printCoinsFromList(coinList: Coin[]): string {
+  if (!coinList.length) {
+    console.log("pass");
+    return "There are currently 0 coins :(";
+  }
+
+  let result: string = "";
+  for (const coin of coinList) {
+    result += `[${coin.id}], `;
+  }
+  return result;
 }
 
 generatePits(playerMarker.getLatLng());
