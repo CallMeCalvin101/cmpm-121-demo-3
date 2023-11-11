@@ -20,6 +20,9 @@ const TILE_DEGREES = 1e-4;
 const NEIGHBORHOOD_SIZE = 8;
 const PIT_SPAWN_PROBABILITY = 0.1;
 const FIRST_ELEMENT = 0;
+const DIVIDER_CHAR = "+";
+const VERTICLE = "verticle";
+const HORIZONTAL = "horizontal";
 
 const mapContainer = document.querySelector<HTMLElement>("#map")!;
 
@@ -40,12 +43,17 @@ leaflet
   })
   .addTo(map);
 
-class Pit {
+interface Momento<T> {
+  toMomento(): T;
+  fromMomento(momento: T): void;
+}
+
+class Pit implements Momento<string> {
   posI: number;
   posJ: number;
   value: number;
   boundedArea: leaflet.Layer;
-  coinStash: Coin[];
+  coinStash: string[];
 
   constructor(
     i: number,
@@ -63,6 +71,21 @@ class Pit {
     this.boundedArea.addTo(map);
   }
 
+  toMomento() {
+    const momento = `${this.value}${DIVIDER_CHAR}${this.coinStash.toString()}`;
+    this.value = 0;
+    this.coinStash = [];
+    this.boundedArea.removeFrom(map);
+    return momento;
+  }
+
+  fromMomento(momento: string) {
+    const result = momento.split(DIVIDER_CHAR);
+    this.value = parseInt(result[0]);
+    this.coinStash = result[1].split(",");
+    this.boundedArea.addTo(map);
+  }
+
   private addPopUp() {
     this.boundedArea.bindPopup(() => {
       const container = document.createElement("div");
@@ -77,7 +100,7 @@ class Pit {
       const poke = container.querySelector<HTMLButtonElement>("#poke")!;
       poke.addEventListener("click", () => {
         if (this.value > 0) {
-          ownedCoins.push(new Coin(this.posI, this.posJ, this.value));
+          ownedCoins.push(createCoin(this.posI, this.posJ, this.value));
           this.value--;
           container.querySelector<HTMLSpanElement>("#value")!.innerHTML =
             this.value.toString();
@@ -89,7 +112,6 @@ class Pit {
       const add = container.querySelector<HTMLButtonElement>("#add")!;
       add.addEventListener("click", () => {
         if (points > 0) {
-          this.value++;
           container.querySelector<HTMLSpanElement>("#value")!.innerHTML =
             this.value.toString();
 
@@ -111,16 +133,14 @@ class Pit {
   }
 }
 
-class Coin {
-  id: string;
-
-  constructor(i: number, j: number, serial: number) {
-    this.id = `${i}:${j}#${serial}`;
-  }
+function createCoin(i: number, j: number, serial: number) {
+  return `${i}:${j}#${serial}`;
 }
 
-const allPits: Pit[] = [];
-let ownedCoins: Coin[] = [];
+//const knownPits: Map<string, Pit> = new Map();
+const knownMomentos: Map<string, string> = new Map();
+let currentPits: Pit[] = [];
+let ownedCoins: string[] = [];
 
 const board = new Board(NULL_ISLAND, TILE_DEGREES, NEIGHBORHOOD_SIZE);
 
@@ -131,17 +151,6 @@ playerMarker.bindTooltip(
   `You are located at cell: ${playerLocation.i} , ${playerLocation.j}`
 );
 playerMarker.addTo(map);
-
-const sensorButton = document.querySelector("#sensor")!;
-sensorButton.addEventListener("click", () => {
-  navigator.geolocation.watchPosition((position) => {
-    playerMarker.setLatLng(
-      leaflet.latLng(position.coords.latitude, position.coords.longitude)
-    );
-    map.setView(playerMarker.getLatLng());
-    generatePits(playerMarker.getLatLng());
-  });
-});
 
 let points = 0;
 const statusPanel = document.querySelector<HTMLDivElement>("#statusPanel")!;
@@ -156,11 +165,52 @@ function makePit(i: number, j: number) {
     Math.floor(luck([i, j, "initialValue"].toString()) * 100),
     bounds
   );
-  allPits.push(pit);
+
+  const key = [i, j].toString();
+  if (knownMomentos.has(key)) {
+    pit.fromMomento(knownMomentos.get(key)!);
+  }
+
+  //knownPits.set([i, j].toString(), pit);
+  currentPits.push(pit);
 }
 
 function generatePits(playerPos: LatLng) {
   const neighboringCells = board.getCellsNearPoint(playerPos);
+  setPlayerPosition(playerPos);
+
+  neighboringCells.forEach((cell) => {
+    const key = [cell.i, cell.j].toString();
+    if (luck(key) < PIT_SPAWN_PROBABILITY) {
+      makePit(cell.i, cell.j);
+      makePit(cell.i, cell.j);
+      //knownPits.get(key)?.fromMomento(knownMomentos.get(key)!);
+    }
+  });
+}
+
+function clearCurrentPits() {
+  for (let pits of currentPits) {
+    const key = [pits.posI, pits.posJ].toString();
+    const momento = pits.toMomento();
+    knownMomentos.set(key, momento);
+  }
+  currentPits = [];
+}
+
+function printCoinsFromList(coinList: string[]): string {
+  if (!coinList.length) {
+    return "There are currently 0 coins :(";
+  }
+
+  let result: string = "";
+  for (const coin of coinList) {
+    result += `[${coin}], `;
+  }
+  return result;
+}
+
+function setPlayerPosition(playerPos: LatLng) {
   const currentCell = board.getCellForPoint(playerPos);
 
   playerLocation.i = currentCell.i;
@@ -168,26 +218,61 @@ function generatePits(playerPos: LatLng) {
   playerMarker.setTooltipContent(
     `You are located at cell: ${playerLocation.i} , ${playerLocation.j}`
   );
-  console.log(playerLocation);
+}
 
-  neighboringCells.forEach((cell) => {
-    if (luck([cell.i, cell.j].toString()) < PIT_SPAWN_PROBABILITY) {
-      makePit(cell.i, cell.j);
-    }
+function updateMap(newPos: LatLng) {
+  clearCurrentPits();
+  playerMarker.setLatLng(newPos);
+  map.setView(playerMarker.getLatLng());
+  generatePits(playerMarker.getLatLng());
+}
+
+function movePlayer(direction: string, value: number) {
+  const newLatLng = playerMarker.getLatLng();
+  if (direction == VERTICLE) {
+    newLatLng.lat += value;
+  } else {
+    newLatLng.lng += value;
+  }
+
+  updateMap(newLatLng);
+}
+
+function createUIButtons() {
+  const sensorButton = document.querySelector("#sensor")!;
+  sensorButton.addEventListener("click", () => {
+    navigator.geolocation.watchPosition((position) => {
+      updateMap(
+        leaflet.latLng(position.coords.latitude, position.coords.longitude)
+      );
+    });
+  });
+
+  const northButton = document.querySelector("#north")!;
+  northButton.addEventListener("click", () => {
+    movePlayer(VERTICLE, TILE_DEGREES);
+  });
+
+  const southButton = document.querySelector("#south")!;
+  southButton.addEventListener("click", () => {
+    movePlayer(VERTICLE, -TILE_DEGREES);
+  });
+
+  const westButton = document.querySelector("#west")!;
+  westButton.addEventListener("click", () => {
+    movePlayer(HORIZONTAL, -TILE_DEGREES);
+  });
+
+  const eastButton = document.querySelector("#east")!;
+  eastButton.addEventListener("click", () => {
+    movePlayer(HORIZONTAL, TILE_DEGREES);
+  });
+
+  const resetButton = document.querySelector("#reset")!;
+  resetButton.addEventListener("click", () => {
+    clearCurrentPits();
   });
 }
 
-function printCoinsFromList(coinList: Coin[]): string {
-  if (!coinList.length) {
-    console.log("pass");
-    return "There are currently 0 coins :(";
-  }
-
-  let result: string = "";
-  for (const coin of coinList) {
-    result += `[${coin.id}], `;
-  }
-  return result;
-}
-
 generatePits(playerMarker.getLatLng());
+createUIButtons();

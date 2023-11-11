@@ -28,6 +28,10 @@ export class Board {
   private getCanonicalCell(cell: Cell): Cell {
     const { i, j } = cell;
     const key = [i, j].toString();
+
+    if (!this.knownCells.has(key)) {
+      this.addKnownCell(cell);
+    }
     return this.knownCells.get(key)!;
   }
 
@@ -41,10 +45,6 @@ export class Board {
       i: Math.floor((point.lat - this.mapOrigin.lat) / this.tileWidth),
       j: Math.floor((point.lng - this.mapOrigin.lng) / this.tileWidth),
     };
-
-    if (!this.knownCells.has(getCell.toString())) {
-      this.addKnownCell(getCell);
-    }
     return this.getCanonicalCell(getCell);
   }
 
@@ -75,9 +75,10 @@ export class Board {
         j < originCell.j + this.tileVisibilityRadius;
         j++
       ) {
-        resultCells.push({ i: i, j: j });
+        resultCells.push(this.getCanonicalCell({ i: i, j: j }));
       }
     }
+
     return resultCells;
   }
 }
