@@ -142,7 +142,9 @@ let currentPits: Pit[] = [];
 let ownedCoins: string[] = [];
 const board = new Board(NULL_ISLAND, TILE_DEGREES, NEIGHBORHOOD_SIZE);
 const playerLocation = { i: 0, j: 0 };
+console.log("test 1");
 const playerMarker = leaflet.marker(MERRILL_CLASSROOM);
+console.log("test 2");
 
 playerMarker.bindTooltip(
   `You are located at cell: ${playerLocation.i} , ${playerLocation.j}`
@@ -172,8 +174,11 @@ function makePit(i: number, j: number) {
 }
 
 function generatePits(playerPos: LatLng) {
+  console.log("test 4");
   const neighboringCells = board.getCellsNearPoint(playerPos);
+  console.log("test 5");
   setPlayerPosition(playerPos);
+  console.log("test 6");
 
   neighboringCells.forEach((cell) => {
     const key = [cell.i, cell.j].toString();
@@ -183,6 +188,7 @@ function generatePits(playerPos: LatLng) {
       //knownPits.get(key)?.fromMomento(knownMomentos.get(key)!);
     }
   });
+  console.log("test 7");
 }
 
 function clearCurrentPits() {
@@ -321,8 +327,11 @@ if (!localStorage.getItem("playerLat")) {
 }
 */
 
+console.log("test 3");
 generatePits(playerMarker.getLatLng());
+console.log("test 8");
 createUIButtons();
+console.log("test 9");
 
 /*
 function testMap() {
