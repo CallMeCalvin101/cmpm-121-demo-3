@@ -319,7 +319,7 @@ if (!localStorage.getItem("playerLat")) {
   fromStorage();
 }
 
-generatePits(playerMarker.getLatLng());
+updateMap(playerMarker.getLatLng());
 createUIButtons();
 
 /*
