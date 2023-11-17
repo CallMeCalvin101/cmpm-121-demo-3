@@ -289,6 +289,7 @@ function setStorage() {
   localStorage.setItem("momentoKeys", keys.toString());
   localStorage.setItem("momentoValues", values.toString());
   localStorage.setItem("playerCoins", ownedCoins.toString());
+  console.log("ping");
 }
 
 function fromStorage() {
