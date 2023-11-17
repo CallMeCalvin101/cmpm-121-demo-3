@@ -137,7 +137,6 @@ function createCoin(i: number, j: number, serial: number) {
   return `${i}:${j}#${serial}`;
 }
 
-//const knownPits: Map<string, Pit> = new Map();
 const knownMomentos: Map<string, string> = new Map();
 let currentPits: Pit[] = [];
 let ownedCoins: string[] = [];
@@ -171,7 +170,6 @@ function makePit(i: number, j: number) {
     pit.fromMomento(knownMomentos.get(key)!);
   }
 
-  //knownPits.set([i, j].toString(), pit);
   currentPits.push(pit);
 }
 
@@ -242,6 +240,7 @@ function createUIButtons() {
   const sensorButton = document.querySelector("#sensor")!;
   sensorButton.addEventListener("click", () => {
     navigator.geolocation.watchPosition((position) => {
+      console.log("ping");
       updateMap(
         leaflet.latLng(position.coords.latitude, position.coords.longitude)
       );
