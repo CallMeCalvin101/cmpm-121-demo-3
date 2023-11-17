@@ -321,6 +321,7 @@ function fromStorage() {
 }
 
 if (!localStorage.getItem("playerLat")) {
+  console.log("accessedLocaleStorage");
   console.log(localStorage.getItem("playerLat"));
   fromStorage();
 }
