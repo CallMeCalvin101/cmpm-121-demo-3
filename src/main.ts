@@ -140,12 +140,10 @@ function createCoin(i: number, j: number, serial: number) {
 const knownMomentos: Map<string, string> = new Map();
 let currentPits: Pit[] = [];
 let ownedCoins: string[] = [];
-
 const board = new Board(NULL_ISLAND, TILE_DEGREES, NEIGHBORHOOD_SIZE);
-
 const playerLocation = { i: 0, j: 0 };
-
 const playerMarker = leaflet.marker(MERRILL_CLASSROOM);
+
 playerMarker.bindTooltip(
   `You are located at cell: ${playerLocation.i} , ${playerLocation.j}`
 );
@@ -223,6 +221,7 @@ function updateMap(newPos: LatLng) {
   playerMarker.setLatLng(newPos);
   map.setView(playerMarker.getLatLng());
   generatePits(playerMarker.getLatLng());
+  setStorage();
 }
 
 function movePlayer(direction: string, value: number) {
@@ -270,8 +269,76 @@ function createUIButtons() {
   const resetButton = document.querySelector("#reset")!;
   resetButton.addEventListener("click", () => {
     clearCurrentPits();
+    knownMomentos.clear();
+    updateMap(playerMarker.getLatLng());
   });
+}
+
+function setStorage() {
+  const playerLatLng = playerMarker.getLatLng();
+  localStorage.setItem("playerLat", playerLatLng.lat.toString());
+  localStorage.setItem("playerLng", playerLatLng.lng.toString());
+
+  const keys: string[] = [];
+  const values: string[] = [];
+  knownMomentos.forEach((value, key) => {
+    keys.push(key);
+    values.push(value);
+  });
+
+  localStorage.setItem("momentoKeys", keys.toString());
+  localStorage.setItem("momentoValues", values.toString());
+  localStorage.setItem("playerCoins", ownedCoins.toString());
+}
+
+function fromStorage() {
+  const storedLat = parseInt(localStorage.getItem("playerLat")!);
+  const storedLng = parseInt(localStorage.getItem("playerLng")!);
+  playerMarker.setLatLng(leaflet.latLng(storedLat, storedLng));
+
+  const unpairedKeys = localStorage.getItem("momentoKeys")!.split(",");
+  const orderedKeys: string[] = [];
+  for (let i = 0; i < unpairedKeys.length; i += 2) {
+    const pairedKey = `${unpairedKeys[i]},${unpairedKeys[i + 1]}`;
+    orderedKeys.push(pairedKey);
+  }
+
+  const values = localStorage.getItem("momentoValues")!.split(",");
+
+  for (let i = 0; i < values.length; i++) {
+    knownMomentos.set(orderedKeys[i], values[i]);
+  }
+
+  ownedCoins = localStorage.getItem("playerCoins")!.split(",");
+  updateMap(playerMarker.getLatLng());
+}
+
+if (!localStorage.getItem("playerLat")) {
+  fromStorage();
 }
 
 generatePits(playerMarker.getLatLng());
 createUIButtons();
+
+/*
+function testMap() {
+  const testKeys: string[] = [];
+  const testValues: string[] = [];
+  knownMomentos.forEach((value, key) => {
+    testKeys.push(key);
+    testValues.push(value);
+  });
+
+  console.log(testKeys.toString());
+  console.log(testValues.toString());
+
+  const unpairedKeys = testKeys.toString().split(",");
+  const orderedKeys: string[] = [];
+  for (let i = 0; i < unpairedKeys.length; i += 2) {
+    const pairedKey = `${unpairedKeys[i]}|${unpairedKeys[i + 1]}`;
+    orderedKeys.push(pairedKey);
+  }
+
+  console.log(orderedKeys.toString());
+}
+*/
