@@ -143,6 +143,7 @@ let ownedCoins: string[] = [];
 const board = new Board(NULL_ISLAND, TILE_DEGREES, NEIGHBORHOOD_SIZE);
 const playerLocation = { i: 0, j: 0 };
 const playerMarker = leaflet.marker(MERRILL_CLASSROOM);
+const playerPolyline = leaflet.polyline([], { color: "red" }).addTo(map);
 
 playerMarker.bindTooltip(
   `You are located at cell: ${playerLocation.i} , ${playerLocation.j}`
@@ -180,7 +181,6 @@ function generatePits(playerPos: LatLng) {
     if (luck(key) < PIT_SPAWN_PROBABILITY) {
       makePit(cell.i, cell.j);
       makePit(cell.i, cell.j);
-      //knownPits.get(key)?.fromMomento(knownMomentos.get(key)!);
     }
   });
 }
@@ -219,6 +219,7 @@ function setPlayerPosition(playerPos: LatLng) {
 function updateMap(newPos: LatLng) {
   clearCurrentPits();
   playerMarker.setLatLng(newPos);
+  playerPolyline.addLatLng(newPos).redraw();
   map.setView(playerMarker.getLatLng());
   generatePits(playerMarker.getLatLng());
   setStorage();
@@ -288,7 +289,6 @@ function setStorage() {
   localStorage.setItem("momentoKeys", keys.toString());
   localStorage.setItem("momentoValues", values.toString());
   localStorage.setItem("playerCoins", ownedCoins.toString());
-  console.log("ping");
 }
 
 function fromStorage() {
@@ -314,33 +314,8 @@ function fromStorage() {
 }
 
 if (!localStorage.getItem("playerLat")) {
-  console.log("accessedLocaleStorage");
-  console.log(localStorage.getItem("playerLat"));
   fromStorage();
 }
 
 updateMap(playerMarker.getLatLng());
 createUIButtons();
-
-/*
-function testMap() {
-  const testKeys: string[] = [];
-  const testValues: string[] = [];
-  knownMomentos.forEach((value, key) => {
-    testKeys.push(key);
-    testValues.push(value);
-  });
-
-  console.log(testKeys.toString());
-  console.log(testValues.toString());
-
-  const unpairedKeys = testKeys.toString().split(",");
-  const orderedKeys: string[] = [];
-  for (let i = 0; i < unpairedKeys.length; i += 2) {
-    const pairedKey = `${unpairedKeys[i]}|${unpairedKeys[i + 1]}`;
-    orderedKeys.push(pairedKey);
-  }
-
-  console.log(orderedKeys.toString());
-}
-*/
