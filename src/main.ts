@@ -314,10 +314,12 @@ function fromStorage() {
   updateMap(playerMarker.getLatLng());
 }
 
+/*
 if (!localStorage.getItem("playerLat")) {
   console.log(localStorage.getItem("playerLat"));
   fromStorage();
 }
+*/
 
 generatePits(playerMarker.getLatLng());
 createUIButtons();
