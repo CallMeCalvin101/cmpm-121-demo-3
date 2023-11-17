@@ -297,7 +297,7 @@ function setStorage() {
   localStorage.setItem("playerCoins", ownedCoins.toString());
   console.log("ping");
 }
-/*
+
 function fromStorage() {
   const storedLat = parseInt(localStorage.getItem("playerLat")!);
   const storedLng = parseInt(localStorage.getItem("playerLng")!);
@@ -318,14 +318,12 @@ function fromStorage() {
 
   ownedCoins = localStorage.getItem("playerCoins")!.split(",");
   updateMap(playerMarker.getLatLng());
-}*/
+}
 
-/*
 if (!localStorage.getItem("playerLat")) {
   console.log(localStorage.getItem("playerLat"));
   fromStorage();
 }
-*/
 
 console.log("test 3");
 generatePits(playerMarker.getLatLng());
