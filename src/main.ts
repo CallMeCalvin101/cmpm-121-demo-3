@@ -289,11 +289,13 @@ function setStorage() {
   localStorage.setItem("momentoKeys", keys.toString());
   localStorage.setItem("momentoValues", values.toString());
   localStorage.setItem("playerCoins", ownedCoins.toString());
+  console.log(ownedCoins.toString());
+  console.log(localStorage.getItem("playerCoins")!.split(","));
 }
 
 function fromStorage() {
-  const storedLat = parseInt(localStorage.getItem("playerLat")!);
-  const storedLng = parseInt(localStorage.getItem("playerLng")!);
+  const storedLat = parseFloat(localStorage.getItem("playerLat")!);
+  const storedLng = parseFloat(localStorage.getItem("playerLng")!);
   playerMarker.setLatLng(leaflet.latLng(storedLat, storedLng));
 
   const unpairedKeys = localStorage.getItem("momentoKeys")!.split(",");
@@ -311,9 +313,12 @@ function fromStorage() {
 
   ownedCoins = localStorage.getItem("playerCoins")!.split(",");
   updateMap(playerMarker.getLatLng());
+  points = ownedCoins.length;
 }
 
-if (!localStorage.getItem("playerLat")) {
+if (!(localStorage.getItem("playerLat") == null)) {
+  console.log(localStorage.getItem("playerLat"));
+  console.log("test");
   fromStorage();
 }
 
