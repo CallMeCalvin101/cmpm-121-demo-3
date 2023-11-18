@@ -317,8 +317,7 @@ function fromStorage() {
 }
 
 if (!(localStorage.getItem("playerLat") == null)) {
-  console.log(localStorage.getItem("playerLat"));
-  console.log("test");
+  console.log("LOCAL STORAGE");
   fromStorage();
 }
 
